@@ -1,19 +1,177 @@
-# 🐝 SwarmBase Auto Bot (opBNB Network)
+# 🚀 SwarmBase Auto Bot
 
-Bot otomatisasi berbasis Python untuk melakukan registrasi, check-in harian, dan minting NFT Badge pada protokol **SwarmBase** di jaringan **opBNB Chain**, dilengkapi dengan fitur **Auto-Refill Gas Fee** dari Master Wallet serta **Auto-Sync Cooldown Real-Time**.
+Bot otomatis untuk SwarmBase di jaringan opBNB.
+
+## Fitur
+
+- ✅ Multi Wallet
+- ✅ Auto Register
+- ✅ Auto Daily Check-in
+- ✅ Auto Mint Pioneer Badge
+- ✅ Auto Refill Gas dari Master Wallet
+- ✅ Auto Cooldown On-Chain
+
+---
+
+# Instalasi
+
+Pastikan sudah menginstall **Python 3.10 atau lebih baru**.
+
+```bash 
+git clone https://github.com/erwindobp98/swarmbase.git
+cd swarmbase
+```
+
+Install semua library:
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
-## 🌟 Fitur Utama
+#  Menambahkan Wallet atau Membuat Wallet reff
 
-- **Auto Gas Refill:** Mengisi saldo opBNB secara otomatis ke akun bot dari Master Wallet jika saldo kurang dari batas minimum.
-- **Real-Time On-Chain Cooldown Sync:** Membaca status cooldown `lastHiveCheckIn` langsung dari smart contract. Bot secara otomatis mendeteksi sisa waktu cooldown per akun secara akurat (tidak asal lewati atau eksekusi).
-- **Smart Dynamic Timer:** Menghitung sisa cooldown terkecil dari seluruh akun dan memasang timer hitung mundur (*live countdown*) otomatis sebelum menjalankan siklus berikutnya.
-- **Auto Registration:** Mendaftarkan akun ke SwarmBase dengan kode referral secara otomatis jika belum terdaftar.
-- **Auto Daily Check-In:** Mengklaim poin harian (*Swarm Score*) hanya ketika cooldown akun sudah selesai, menghemat gas fee.
-- **Auto Mint Badges:** Memeriksa kualifikasi dan melakukan minting Pioneer/Builder/OG Badge secara otomatis.
+Buka file:
+
+```
+accounts.txt
+```
+
+Isi satu Private Key per baris.
+
+Contoh:
+
+```
+0xPrivateKey1
+0xPrivateKey2
+0xPrivateKey3
+```
+
+#  Atau buat baru automatis
+
+Jalankan:
+
+```bash
+python generatePK.py
+```
+
+Masukkan jumlah wallet yang ingin dibuat.
+
+Contoh:
+
+```
+100
+```
+
+Private Key akan otomatis tersimpan di:
+
+```
+accounts.txt
+```
 
 ---
+
+# Menyiapkan Master Wallet
+
+Buka file:
+
+```
+master_key.txt
+```
+
+Isi dengan **1 Private Key** wallet kusus menyimpan $opBNB.
+
+Contoh:
+
+```
+0x123456789abcdef....
+```
+
+Master Wallet digunakan untuk mengirim saldo opBNB ke wallet/akun tuyul yang kekurangan gas.
+
+> Pastikan Master Wallet memiliki saldo opBNB yang cukup.
+
+---
+
+# Mengganti Referral
+
+Buka file:
+
+```
+main.py
+```
+
+Cari bagian berikut pada baris 32:
+
+```python
+self.CONTRACT_ADDRESS = {
+    "core": "...",
+    "nft": "...",
+    "ref": "0x22f3185db0a560f9106d7c84d4a2ee0255a0aafd",
+}
+```
+
+Ganti alamat pada bagian:
+
+```python
+"ref"
+```
+
+Misalnya:
+
+```python
+"ref": "0xAlamatReferralMilikAnda"
+```
+
+Contoh:
+
+```python
+self.CONTRACT_ADDRESS = {
+    "core": "...",
+    "nft": "...",
+    "ref": "0x1234567890abcdef1234567890abcdef12345678",
+}
+```
+
+Simpan file setelah diubah.
+
+> **Catatan:** Semua wallet yang belum pernah melakukan registrasi akan menggunakan alamat referral tersebut.
+
+---
+
+# Menjalankan Bot
+
+Jalankan:
+
+```bash
+python main.py
+```
+
+Bot akan otomatis:
+
+1. Membaca Master Wallet
+2. Membaca semua wallet
+3. Mengecek saldo
+4. Mengirim gas jika diperlukan
+5. Melakukan registrasi (jika belum)
+6. Daily Check-in
+7. Mint Pioneer Badge
+8. Menunggu hingga waktu check-in berikutnya
+
+---
+
+# Struktur Folder
+
+```
+SwarmBase-Bot/
+
+├── main.py
+├── generatePK.py
+├── requirements.txt
+├── accounts.txt
+├── master_key.txt
+└── README.md
+```
 
 ### 🖥️ Contoh Output Terminal saat Dijalankan
 
