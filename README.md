@@ -36,7 +36,10 @@ Buka file:
 ```
 accounts.txt
 ```
-
+Atau
+```
+nano accounts.txt
+```
 Isi satu Private Key per baris.
 
 Contoh:
@@ -46,6 +49,7 @@ Contoh:
 0xPrivateKey2
 0xPrivateKey3
 ```
+Simpan file setelah diubah atau tekan (ctrl+x+y+enter)
 
 #  Atau buat baru automatis
 
@@ -78,6 +82,10 @@ Buka file:
 ```
 master_key.txt
 ```
+Atau
+```
+nano master_key.txt
+```
 
 Isi dengan **1 Private Key** wallet kusus menyimpan $opBNB.
 
@@ -86,6 +94,7 @@ Contoh:
 ```
 0x123456789abcdef....
 ```
+Simpan file setelah diubah atau tekan (ctrl+x+y+enter)
 
 Master Wallet digunakan untuk mengirim saldo opBNB ke wallet/akun tuyul yang kekurangan gas.
 
@@ -99,6 +108,10 @@ Buka file:
 
 ```
 main.py
+```
+Atau
+```
+nano main.py
 ```
 
 Cari bagian berikut pada baris 32:
@@ -133,7 +146,7 @@ self.CONTRACT_ADDRESS = {
 }
 ```
 
-Simpan file setelah diubah.
+Simpan file setelah diubah atau tekan (ctrl+x+y+enter)
 
 > **Catatan:** Semua wallet yang belum pernah melakukan registrasi akan menggunakan alamat referral tersebut.
 
