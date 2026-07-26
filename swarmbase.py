@@ -2,9 +2,9 @@ from web3 import Web3, HTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 from web3.exceptions import TransactionNotFound
 from eth_account import Account
-from datetime import datetime
+from datetime import datetime, timedelta
 from colorama import Fore, Style, init
-import asyncio, os
+import asyncio, os, sys, time
 
 # Inisialisasi colorama
 init(autoreset=True)
@@ -20,8 +20,11 @@ class SwarmBaseAutoRefill:
         self.master_account = None
 
         # Pengaturan Nilai Transfer Pengisian Saldo
-        self.MIN_BALANCE_THRESHOLD = 0.0001  # Batas minimal saldo opBNB sebelum di-refill
-        self.REFILL_AMOUNT = 0.0003          # Jumlah opBNB yang dikirim jika saldo kurang
+        self.MIN_BALANCE_THRESHOLD = 0.000001  # Batas minimal saldo opBNB sebelum di-refill
+        self.REFILL_AMOUNT = 0.000003          # Jumlah opBNB yang dikirim jika saldo kurang
+
+        # Durasi interval check-in standar (24 jam = 86400 detik)
+        self.CHECKIN_INTERVAL = 24 * 3600 
 
         self.CONTRACT_ADDRESS = {
             "core": "0x01f9Eb284F94b54CF0854ef3B6FeF69C10babe0C",
@@ -159,7 +162,6 @@ class SwarmBaseAutoRefill:
                 await asyncio.sleep(2 ** attempt)
         raise Exception("Receipt tidak ditemukan.")
 
-    # --- FITUR DENGAN ALUR BARU: AUTO-REFILL DARI MASTER WALLET ---
     async def refill_gas_if_needed(self, web3: Web3, target_address: str):
         target_balance = await self.get_balance(web3, target_address)
         
@@ -213,6 +215,31 @@ class SwarmBaseAutoRefill:
         except Exception as e:
             self.log(f"{Fore.RED + Style.BRIGHT}Gagal mengecek status registrasi: {e}{Style.RESET_ALL}")
             return None
+
+    # --- FITUR BARU: CEK COOLDOWN DARI CONTRACT ---
+    async def get_checkin_cooldown(self, idx: int, web3: Web3):
+        """Mengecek sisa detik sebelum akun dapat melakukan check-in kembali berdasarkan data On-Chain."""
+        try:
+            address = web3.to_checksum_address(self.accounts[idx]['address'])
+            contract = web3.eth.contract(
+                address=web3.to_checksum_address(self.CONTRACT_ADDRESS["core"]),
+                abi=self.CORE_ABI
+            )
+            
+            last_checkin_time = await asyncio.to_thread(contract.functions.lastHiveCheckIn(address).call)
+            
+            # Jika belum pernah check-in
+            if last_checkin_time == 0:
+                return 0
+
+            current_time = int(time.time())
+            next_checkin_time = last_checkin_time + self.CHECKIN_INTERVAL
+            time_left = next_checkin_time - current_time
+
+            return max(0, time_left)
+        except Exception as e:
+            self.log(f"{Fore.RED + Style.BRIGHT}Gagal membaca data cooldown: {e}{Style.RESET_ALL}")
+            return 0
 
     async def perform_register(self, idx: int, web3: Web3):
         try:
@@ -338,7 +365,6 @@ class SwarmBaseAutoRefill:
             abi=self.NFT_ABI
         )
 
-        # Cek & Mint Pioneer Badge (ID: 1)
         has_pioneer = await asyncio.to_thread(nft_contract.functions.hasBadge(address, 1).call)
         if not has_pioneer:
             self.log(f"NFT    : {Fore.YELLOW + Style.BRIGHT}Mencoba Mint Pioneer Badge...{Style.RESET_ALL}")
@@ -353,18 +379,18 @@ class SwarmBaseAutoRefill:
 
         web3 = await self.get_web3()
         if not web3:
-            return
+            return 0
 
-        # 1. Cek Saldo & Auto-Refill dari Master Wallet jika Saldo Kosong
+        # 1. Refill Saldo jika diperlukan
         refill_status = await self.refill_gas_if_needed(web3, address)
         if not refill_status:
             self.log(f"{Fore.RED + Style.BRIGHT}Gagal memenuhi saldo minimum, melewati akun ini.{Style.RESET_ALL}")
-            return
+            return 0
 
         curr_balance = await self.get_balance(web3, address)
         self.log(f"Saldo  : {Fore.GREEN + Style.BRIGHT}{curr_balance:.6f} opBNB{Style.RESET_ALL}")
 
-        # 2. Registrasi SwarmBase
+        # 2. Check Registration
         is_registered = await self.check_registered(idx, web3)
         if is_registered is False:
             self.log(f"Status : {Fore.YELLOW + Style.BRIGHT}Belum Terdaftar. Melakukan Registrasi...{Style.RESET_ALL}")
@@ -374,35 +400,82 @@ class SwarmBaseAutoRefill:
         else:
             self.log(f"Status : {Fore.GREEN + Style.BRIGHT}Sudah Terdaftar{Style.RESET_ALL}")
 
-        # 3. Daily Check-In
-        self.log(f"Proses : {Fore.WHITE + Style.BRIGHT}Melakukan Check-in Harian...{Style.RESET_ALL}")
-        checkin_tx = await self.perform_checkin(idx, web3)
-        if checkin_tx:
-            self.log(f"{Fore.GREEN + Style.BRIGHT}Check-in Berhasil! TX: {checkin_tx}{Style.RESET_ALL}")
+        # 3. Cek Cooldown Real-time sebelum Check-In
+        cooldown_seconds = await self.get_checkin_cooldown(idx, web3)
+        if cooldown_seconds > 0:
+            hours, remainder = divmod(cooldown_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            self.log(f"Proses : {Fore.YELLOW + Style.BRIGHT}Belum waktunya Check-in! Cooldown On-Chain: {hours:02d}j {minutes:02d}m {seconds:02d}d{Style.RESET_ALL}")
+        else:
+            self.log(f"Proses : {Fore.WHITE + Style.BRIGHT}Melakukan Check-in Harian...{Style.RESET_ALL}")
+            checkin_tx = await self.perform_checkin(idx, web3)
+            if checkin_tx:
+                self.log(f"{Fore.GREEN + Style.BRIGHT}Check-in Berhasil! TX: {checkin_tx}{Style.RESET_ALL}")
+            
+            # Re-fetch sisa cooldown setelah transaksi berhasil
+            cooldown_seconds = await self.get_checkin_cooldown(idx, web3)
 
-        # 4. Cek & Mint NFT Badges
+        # 4. Mint Badges
         await self.check_and_mint_badges(idx, web3)
 
-    async def run(self):
-        self.clear_terminal()
-        print(f"{Fore.GREEN + Style.BRIGHT}=== SwarmBase Auto Bot (Auto-Refill Gas Fee) ===\n{Style.RESET_ALL}")
+        # Kembalikan sisa cooldown (plus buffer 2 menit ekstra)
+        return cooldown_seconds + 120 if cooldown_seconds > 0 else (self.CHECKIN_INTERVAL + 120)
+
+    async def countdown_timer(self, total_seconds: int):
+        """Hitung mundur waktu tunggu secara langsung di terminal."""
+        while total_seconds > 0:
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            timer_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            
+            sys.stdout.write(
+                f"\r{Fore.CYAN + Style.BRIGHT}[ Timer ]{Style.RESET_ALL} "
+                f"{Fore.YELLOW + Style.BRIGHT}Menunggu check-in berikutnya dalam: {timer_str}{Style.RESET_ALL} "
+            )
+            sys.stdout.flush()
+            await asyncio.sleep(1)
+            total_seconds -= 1
         
-        if not self.load_master_account():
-            return
+        sys.stdout.write("\r" + " " * 80 + "\r")
+        sys.stdout.flush()
 
-        raw_accounts = self.load_accounts()
-        if not raw_accounts:
-            return
+    async def run(self):
+        while True:
+            self.clear_terminal()
+            print(f"{Fore.GREEN + Style.BRIGHT}=== SwarmBase Auto Bot (Auto Sync Cooldown) ===\n{Style.RESET_ALL}")
+            
+            if not self.load_master_account():
+                return
 
-        master_addr = self.mask_address(self.master_account["address"])
-        self.log(f"Master Wallet : {Fore.YELLOW + Style.BRIGHT}{master_addr}{Style.RESET_ALL}")
-        self.log(f"Total Bot     : {Fore.WHITE + Style.BRIGHT}{len(raw_accounts)} Akun{Style.RESET_ALL}\n")
+            raw_accounts = self.load_accounts()
+            if not raw_accounts:
+                return
 
-        for idx, pk in enumerate(raw_accounts):
-            if self.setup_account(idx, pk):
-                await self.process_single_account(idx)
-                print("-" * 50)
-                await asyncio.sleep(2)
+            master_addr = self.mask_address(self.master_account["address"])
+            self.log(f"Master Wallet : {Fore.YELLOW + Style.BRIGHT}{master_addr}{Style.RESET_ALL}")
+            self.log(f"Total Bot     : {Fore.WHITE + Style.BRIGHT}{len(raw_accounts)} Akun{Style.RESET_ALL}\n")
+
+            min_cooldown_found = float('inf')
+
+            for idx, pk in enumerate(raw_accounts):
+                if self.setup_account(idx, pk):
+                    next_wait = await self.process_single_account(idx)
+                    
+                    # Cari sisa cooldown terkecil di antara semua akun
+                    if next_wait > 0 and next_wait < min_cooldown_found:
+                        min_cooldown_found = next_wait
+                        
+                    print("-" * 50)
+                    await asyncio.sleep(2)
+
+            # Jika tidak ada cooldown yang terbaca, berikan delay default 24 jam + 2 menit
+            if min_cooldown_found == float('inf') or min_cooldown_found <= 0:
+                min_cooldown_found = self.CHECKIN_INTERVAL + 120
+
+            self.log(f"{Fore.GREEN + Style.BRIGHT}Siklus pemrosesan akun selesai.{Style.RESET_ALL}")
+            
+            # Jalankan timer berdasarkan waktu tunggu riil terkecil
+            await self.countdown_timer(int(min_cooldown_found))
 
 if __name__ == "__main__":
     bot = SwarmBaseAutoRefill()
