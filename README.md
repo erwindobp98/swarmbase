@@ -10,6 +10,5 @@ Bot otomatisasi berbasis Python untuk melakukan registrasi, check-in harian, min
 - **Auto Registration:** Mendaftarkan akun ke SwarmBase dengan kode referral secara otomatis.
 - **Auto Daily Check-In:** Mengklaim poin harian (*Swarm Score*) secara berkala.
 - **Auto Mint Badges:** Menguji kualifikasi dan melakukan minting Pioneer/Builder/OG Badge.
-- **Direct RPC Connection:** Tanpa perantara proxy, koneksi langsung, cepat, dan stabil.
 
 ---
