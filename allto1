@@ -69,4 +69,4 @@ if __name__ == "__main__":
     with open("accounts.txt", "w") as file:
         file.writelines("\n".join(successful_keys) + ("\n" if successful_keys else ""))
 
-    print("Semua Aset Sudah Terkuras.")
+    print("Semua Aset Sudah terkirim.")
