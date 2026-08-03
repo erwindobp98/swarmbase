@@ -2,7 +2,7 @@
 
 Bot otomatis untuk SwarmBase di jaringan opBNB.
 
-## Fitur
+## Fitur main.py
 
 - ✅ Multi Wallet
 - ✅ Auto Register
@@ -10,6 +10,14 @@ Bot otomatis untuk SwarmBase di jaringan opBNB.
 - ✅ Auto Mint Pioneer Badge
 - ✅ Auto Refill Gas dari Master Wallet
 - ✅ Auto Cooldown On-Chain
+
+## Fiture generatePK.py
+
+- ✅ Membuat banyak wallet reff 
+
+## Fitur allto1.py
+
+- ✅ Mengirimkan semua aset OPbnb pada wallet reff ke wallet master
 
 ---
 
@@ -171,6 +179,11 @@ Bot akan otomatis:
 7. Mint Pioneer Badge
 8. Menunggu hingga waktu check-in berikutnya
 
+# Jalankan allto1.py untuk mengirim aset OPbnb semua akun reff ke wallet master
+```bash
+python allto1.py
+```
+
 ---
 
 # Struktur Folder
@@ -183,6 +196,7 @@ SwarmBase-Bot/
 ├── requirements.txt
 ├── accounts.txt
 ├── master_key.txt
+├── allto1.py
 └── README.md
 ```
 
