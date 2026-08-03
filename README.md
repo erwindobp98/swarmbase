@@ -180,6 +180,44 @@ Bot akan otomatis:
 8. Menunggu hingga waktu check-in berikutnya
 
 # Jalankan allto1.py untuk mengirim aset OPbnb semua akun reff ke wallet master
+# Mengganti Address wallet master
+
+Buka file:
+
+```
+allto1.py
+```
+Atau
+```
+nano allto1.py
+```
+
+Cari bagian berikut pada baris 11:
+
+```
+DESTINATION_ADDRESS = "0x4b05CAD2a8E10DFdE15D0ec4239bCB94e107ccbC"
+```
+
+Ganti alamat pada bagian:
+
+```python
+DESTINATION_ADDRESS
+```
+
+Misalnya:
+
+```python
+DESTINATION_ADDRESS: "0xAlamatWalletMasterMilikAnda"
+```
+
+Contoh:
+
+```python
+DESTINATION_ADDRESS: "0x1234567890abcdef1234567890abcdef12345678"
+```
+
+Lalu jalankan:
+
 ```bash
 python allto1.py
 ```
