@@ -10,7 +10,7 @@ with open("accounts.txt", "r") as file:
 
 DESTINATION_ADDRESS = "0x4b05CAD2a8E10DFdE15D0ec4239bCB94e107ccbC"
 
-# Jumlah sisa saldo yang ingin disisipkan di wallet (0.000001 BNB dalam Wei)
+# Jumlah sisa saldo yang ingin disisipkan di wallet (0.0000005 BNB dalam Wei)
 RESERVE_AMOUNT = Web3.to_wei(0.0000005, 'ether')
 
 # Mendapatkan Chain ID opBNB
@@ -52,21 +52,14 @@ def send_transaction(private_key):
 if __name__ == "__main__":
     print(f"Connected to opBNB | Using Chain ID: {CHAIN_ID}")
 
-    successful_keys = []  # Untuk menyimpan private key yang gagal/tidak cukup saldo
-
     for key in PRIVATE_KEYS:
         try:
             tx_hash = send_transaction(key)
             if tx_hash:
-                print(f"Transaction sent: {tx_hash}")
+                print(f"Transaction sent successfully: {tx_hash}")
             else:
-                successful_keys.append(key)  # Simpan private key yang gagal dipakai
+                print("Skipped due to insufficient funds.")
         except Exception as e:
             print(f"Error processing account: {e}")
-            successful_keys.append(key)
-
-    # Menyimpan kembali private keys yang belum digunakan
-    with open("accounts.txt", "w") as file:
-        file.writelines("\n".join(successful_keys) + ("\n" if successful_keys else ""))
 
     print("Semua Aset Sudah terkirim.")
